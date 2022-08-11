@@ -27,11 +27,13 @@ class TermColor:
 Create a proxy for a host and port combination.
 """
 def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.log', traffic_file='traffic.log', quiet=False):
+  formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
   secret_logger = logging.getLogger('secrets')
   secret_logger.setLevel(logging.INFO)
   if secrets_file != 'off':
     fh = logging.FileHandler(secrets_file)
     fh.setLevel(logging.INFO)
+    fh.setFormatter(formatter)
     secret_logger.addHandler(fh)
 
   if quiet:
@@ -42,6 +44,7 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
   if traffic_file != 'off':
     fh = logging.FileHandler(traffic_file)
     fh.setLevel(logging.INFO)
+    fh.setFormatter(formatter)
     traffic_logger.addHandler(fh)
 
   app = Flask(__name__, static_folder=None)
@@ -74,9 +77,9 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
         mimetype, options = cgi.parse_header(modified_headers['Content-Type'])
         in_decoded = raw_in.decode(options.get('encoding', 'utf8'))  # if no encoding, assume utf8
         if mimetype == 'application/x-www-form-urlencoded':
-          secret_logger.info('capture(%s): form: %s', request.remote_addr, urlparse.parse_qs(in_decoded))
+          secret_logger.info('capture(%s): %s: form: %s', request.remote_addr, path, urlparse.parse_qs(in_decoded))
         elif mimetype == 'application/json':
-          secret_logger.info('capture(%s): json: %s', request.remote_addr, json.loads(in_decoded))
+          secret_logger.info('capture(%s): %s: json: %s', request.remote_addr, path, json.loads(in_decoded))
 
       # if they've sent cookies, log them.
       if 'Cookie' in modified_headers:

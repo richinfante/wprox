@@ -28,24 +28,32 @@ Create a proxy for a host and port combination.
 """
 def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.log', traffic_file='traffic.log', quiet=False):
   formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+  stdout_formatter = logging.Formatter(fmt=f'{TermColor.BOLD}%(asctime)s %(levelname)s{TermColor.ENDC} %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+  channel = logging.StreamHandler()
+  channel.setFormatter(stdout_formatter)
+
   secret_logger = logging.getLogger('secrets')
   secret_logger.setLevel(logging.INFO)
+  secret_logger.propagate = False
   if secrets_file != 'off':
     fh = logging.FileHandler(secrets_file)
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
     secret_logger.addHandler(fh)
 
-  if quiet:
-    secret_logger.propagate = False
+  if not quiet:
+    secret_logger.addHandler(channel)
 
   traffic_logger = logging.getLogger('traffic')
   traffic_logger.setLevel(logging.INFO)
+  traffic_logger.propagate = False
   if traffic_file != 'off':
     fh = logging.FileHandler(traffic_file)
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
     traffic_logger.addHandler(fh)
+
+  traffic_logger.addHandler(channel)
 
   app = Flask(__name__, static_folder=None)
 
@@ -164,7 +172,7 @@ where permission from upstream site owners has been given.
     parser.add_argument('--proto', help='protocol to use (http/https).', default='https')
     parser.add_argument('--bind_ip', help='Bind IP address', default='0.0.0.0')
     parser.add_argument('--bind_port', help='Bind Port', default=2600, type=int)
-    parser.add_argument('--num-threads', help='Number of threads for request serving', default=4, type=int)
+    parser.add_argument('--num-threads', help='Number of threads for request serving', default=8, type=int)
     parser.add_argument('--dev-mode', help='Use flask dev server (not recommended)', action='store_true')
     parser.add_argument('--debug', help='Print some extra debug info', action='store_true')
     parser.add_argument('--break', dest='breakpoints', help='"break" drop requests to a specific path on this server, like analytics, logging, 2fa.', nargs='+')

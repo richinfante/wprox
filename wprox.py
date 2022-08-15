@@ -232,7 +232,7 @@ where permission from upstream site owners has been given.
     parser.add_argument('--traffic-log', help='Logfile to write traffic logs to', default='traffic.log')
     parser.add_argument('--trusted-proxy', help='When running behind a reverse-proxy, trust it to pass headers containing forwarded info', default=None)
     parser.add_argument('--log', dest='stdout_log_mode', help='Set traffic types to log', choices=['all', 'secrets', 'traffic', 'none'], default='all')
-    parser.add_argument('--filter', dest='filter_exprs', help='Filter logs to specific expressions (regex supported', nargs='+')
+    parser.add_argument('--filters', dest='filter_exprs', help='Filter logs to specific expressions (regex supported)', nargs='+')
     # parse args
     args = parser.parse_args()
 

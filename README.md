@@ -12,7 +12,6 @@ This can be useful for conducting phishing simulations or for analyzing web apps
 
 ```bash
 $ python3 wprox.py --host altoromutual.com --proto http
-
  __  __  __  _____   _ __   ___   __  _
 /\ \/\ \/\ \/\ '__`\/\`'__\/ __`\/\ \/'\
 \ \ \_/ \_/ \ \ \L\ \ \ \//\ \L\ \/>  </
@@ -28,18 +27,11 @@ where permission from upstream site owners has been given.
 
 Do not use this tool for illegal purposes!
 
-starting wprox on 0.0.0.0:2600...
-```
-
-
-## Options
-
-```
-usage: wprox.py [-h] [--host HOST] [--proto PROTO] [--bind_ip BIND_IP]
-                [--bind_port BIND_PORT] [--num-threads NUM_THREADS]
-                [--dev-mode] [--debug] [--break BREAKPOINTS [BREAKPOINTS ...]]
-                [--secrets-log SECRETS_LOG] [--traffic-log TRAFFIC_LOG]
-                [--trusted-proxy TRUSTED_PROXY] [--quiet]
+usage: wprox.py [-h] [--host HOST] [--proto PROTO] [--bind_ip BIND_IP] [--bind_port BIND_PORT]
+                [--num-threads NUM_THREADS] [--dev-mode] [--debug]
+                [--break BREAKPOINTS [BREAKPOINTS ...]] [--break-redir BREAK_REDIR]
+                [--secrets-log SECRETS_LOG] [--traffic-log TRAFFIC_LOG] [--trusted-proxy TRUSTED_PROXY]
+                [--log {all,secrets,traffic,none}] [--filters FILTER_EXPRS [FILTER_EXPRS ...]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -53,15 +45,19 @@ optional arguments:
   --dev-mode            Use flask dev server (not recommended)
   --debug               Print some extra debug info
   --break BREAKPOINTS [BREAKPOINTS ...]
-                        "break" drop requests to a specific path on this
-                        server, like analytics, logging, 2fa.
+                        "break" drop requests to a specific path on this server, like analytics,
+                        logging, 2fa. e.g.: --break "POST:/login/2fa"
+  --break-redir BREAK_REDIR
+                        Redirect to arbitrary location when breakpoint is triggered
   --secrets-log SECRETS_LOG
                         Logfile to write secrets to
   --traffic-log TRAFFIC_LOG
                         Logfile to write traffic logs to
   --trusted-proxy TRUSTED_PROXY
-                        When running behind a reverse-proxy, trust it to pass
-                        headers containing forwarded info
-  --quiet               Hide messages about credentials and just display
-                        traffic logs in STDOUT
+                        When running behind a reverse-proxy, trust it to pass headers containing
+                        forwarded info
+  --log {all,secrets,traffic,none}
+                        Set traffic types to log
+  --filters FILTER_EXPRS [FILTER_EXPRS ...]
+                        Filter logs to specific expressions (regex supported)
 ```

@@ -171,7 +171,7 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
         if h.lower() in task.hop_by_hop:
           # Use waitress's list of hop-by-hop headers
           pass  # if considered to be "hop-by-hop", drop it.
-        if h.lower() in SECURITY_HEADERS:
+        elif h.lower() in SECURITY_HEADERS:
           pass # skip writing security headers like content-security-policy
         else:
           out_headers[h] = hv

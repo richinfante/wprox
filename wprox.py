@@ -12,6 +12,9 @@ from bs4 import BeautifulSoup
 from flask import Flask, request
 from waitress import task
 
+# compression libraries
+import gzip
+import brotli as brotlipy
 
 # ref: https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
 class TermColor:
@@ -88,7 +91,7 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
     traffic_logger.addHandler(channel)
 
   # Support filtering on stdout.
-  # All logs still go to full logfiles.
+  # All logs still go to full log files.
   if filter_logs:
     channel.addFilter(RegexLogFilter(filter_logs))
 
@@ -158,7 +161,7 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
       resp = requests.Session().send(
         request_object.prepare(),
         stream=True,
-        allow_redirects=False # don't want to be smart - breaks web functionality. We want the browser to perform redirects.
+        allow_redirects=False # don't want to be smart - breaks web functionality. We want the browser to perform redirects, not us.
       )
 
       traffic_logger.debug('proxy(%s): %s %s/%s %s', request.remote_addr, request.method, target_host, path, resp.status_code)
@@ -167,12 +170,22 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
       # These headers are used for things like transfer encoding, etc, or security.
       # These are only needed inside the requests module. Our server might add different ones.
       out_headers = {}
+      decode_mode = 'raw'
       for (h, hv) in resp.headers.items():
+        # extract content encoding for later decompression
+        if h.lower() == 'content-encoding':
+          decode_mode = hv.lower()
+
+        # remove hop-by-hop headers
         if h.lower() in task.hop_by_hop:
           # Use waitress's list of hop-by-hop headers
           pass  # if considered to be "hop-by-hop", drop it.
+
+        # skip writing security headers like content-security-policy
         elif h.lower() in SECURITY_HEADERS:
-          pass # skip writing security headers like content-security-policy
+          pass
+
+        # all other headers are fine to pass through
         else:
           out_headers[h] = hv
 
@@ -188,6 +201,12 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
 
         # if HTML, parse and modify
         if mimetype == 'text/html':
+          # decompress contents
+          if decode_mode == 'gzip':
+            res_data = gzip.decompress(res_data)
+          elif decode_mode == 'br':
+            res_data = brotlipy.decompress(res_data)
+
           soup = BeautifulSoup(res_data, 'html.parser')
 
           # TODO: do modifications here.
@@ -197,6 +216,12 @@ def make_proxy(target_host, target_proto, breakpoints=[], secrets_file='secrets.
           # - inject javascript to modify application
 
           res_data = str(soup).encode(options.get('charset', 'utf8'))
+
+          # re compress to maintain compression from original
+          if decode_mode == 'gzip':
+            res_data = gzip.compress(res_data)
+          elif decode_mode == 'br':
+            res_data = brotlipy.compress(res_data)
 
       return res_data, resp.status_code, out_headers
   return app
@@ -214,12 +239,12 @@ if __name__ == '__main__':
 {TermColor.ENDC}
 a lightweight web proxy for penetration testing, phishing simulations.
 
-DISCLAIMER: This is {TermColor.UNDERLINE}only{TermColor.ENDC} for testing or research purposes,
-where permission from upstream site owners has been given.
+DISCLAIMER: This is {TermColor.UNDERLINE}only{TermColor.ENDC} for penetration testing or research purposes,
+where proper permission from upstream site owners has been give.
 
 {TermColor.BOLD}{TermColor.WARNING}Do not use this tool for illegal purposes!{TermColor.ENDC}\n""")
     parser = argparse.ArgumentParser()
-    parser.add_argument('--host', help='The host to proxy.')
+    parser.add_argument('--host', help='The host to proxy.', required=True)
     parser.add_argument('--proto', help='protocol to use (http/https).', default='https')
     parser.add_argument('--bind_ip', help='Bind IP address', default='0.0.0.0')
     parser.add_argument('--bind_port', help='Bind Port', default=2600, type=int)
@@ -237,7 +262,7 @@ where permission from upstream site owners has been given.
     args = parser.parse_args()
 
     if args.debug:
-      print(args)
+      print(f'args: {vars(args)}')
 
     # create a proxy for this host/protocol
     app = make_proxy(args.host, args.proto, breakpoints=args.breakpoints, secrets_file=args.secrets_log, traffic_file=args.traffic_log, stdout_log_mode=args.stdout_log_mode, break_redir=args.break_redir, filter_logs=args.filter_exprs)
